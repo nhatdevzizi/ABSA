@@ -1,18 +1,22 @@
 from datasets import load_dataset
 import torch
-
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# ds = load_dataset("uitnlp/vietnamese_students_feedback")
-# train = load_dataset("uitnlp/vietnamese_students_feedback", split="train", streaming = True)
-# validation = load_dataset("uitnlp/vietnamese_students_feedback", split = "validation")
-
-# first_1000 = train.take(1000)
+base = "https://huggingface.co/datasets/uitnlp/vietnamese_students_feedback/resolve/refs%2Fconvert%2Fparquet/default"
+ds = load_dataset(
+    "parquet",
+    data_files = {
+        "train": f"{base}/train/0000.parquet",
+        "validation": f"{base}/validation/0000.parquet",
+        "test": f"{base}/test/0000.parquet",
+    },
+)
 
 def main():
-    x = torch.rand(5,3)
-    print(x)
+    print(ds)
 
 if __name__ == "__main__":
     main()
