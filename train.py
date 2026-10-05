@@ -1,6 +1,12 @@
-from datasets import load_dataset
+from main import ds
+import re
+import unicodedata
 
-ds = load_dataset("uitnlp/vietnamese_students_feedback")
-train = load_dataset("uitnlp/vietnamese_students_feedback", split="train")
-validation = load_dataset("uitnlp/vietnamese_students_feedback", split = "validation")
+token = re.compile(r"\w+|[^\w\s]",re.UNICODE)
+
+def tokenize(sentence: str) -> list[str]:
+    sentence = unicodedata.normalize("NFC", sentence).lower()
+    return token.findall(sentence)
+
+
 
