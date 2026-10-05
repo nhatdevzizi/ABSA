@@ -3,6 +3,7 @@ import torch
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from train import tokenize
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 base = "https://huggingface.co/datasets/uitnlp/vietnamese_students_feedback/resolve/refs%2Fconvert%2Fparquet/default"
@@ -16,7 +17,8 @@ ds = load_dataset(
 )
 
 def main():
-    print(ds)
+    # print(ds)
+    print(tokenize("Giảng viên dạy rất tốt!"))
 
 if __name__ == "__main__":
     main()
