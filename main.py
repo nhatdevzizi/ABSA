@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from train import *
+from BiLSTM import BiLSTM
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 base = "https://huggingface.co/datasets/uitnlp/vietnamese_students_feedback/resolve/refs%2Fconvert%2Fparquet/default"
@@ -39,6 +40,7 @@ def main():
         shuffle=False,
         collate_fn=lambda rows: collate_batch(rows, vocab),
     )
+    
 
 
 if __name__ == "__main__":

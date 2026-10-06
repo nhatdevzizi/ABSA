@@ -21,7 +21,7 @@ def build_vocab(sentences: Iterable[str], min_freq: int = 1) -> dict[str,int]:
 def encode_sentence(sentence: str, vocab: dict[str,int]) -> list[int]:
     res = []
     for token in tokenize(sentence):
-        res.append(vocab.get(token, vocab["<unk>"]))
+        res.append(vocab.get(token, vocab["<unk>"])) #Default value of vocab is <unk>
     return res
 
 def collate_batch(rows, vocab):
