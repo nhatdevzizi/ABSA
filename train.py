@@ -3,6 +3,7 @@ from collections import Counter
 from collections.abc import Iterable
 from underthesea import word_tokenize
 from torch.nn.utils.rnn import pad_sequence
+from BiLSTM import BiLSTM
 
 #Filtering data
 def tokenize(sentence: str) -> list[str]:
@@ -34,3 +35,4 @@ def collate_batch(rows, vocab):
     sentiments = torch.tensor([row["sentiment"] for row in rows])
     topics = torch.tensor([row["topic"] for row in rows])
     return token_ids, lengths, sentiments, topics
+
