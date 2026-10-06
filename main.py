@@ -1,24 +1,24 @@
+from copy import deepcopy
+
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 import torch
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from train import *
+
+from train import build_vocab, collate_batch
 from BiLSTM import BiLSTM
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 base = "https://huggingface.co/datasets/uitnlp/vietnamese_students_feedback/resolve/refs%2Fconvert%2Fparquet/default"
-ds = load_dataset(
-    "parquet",
-    data_files = {
-        "train": f"{base}/train/0000.parquet",
-        "validation": f"{base}/validation/0000.parquet",
-        "test": f"{base}/test/0000.parquet",
-    },
-)
 
 def main():
+    ds = load_dataset(
+        "parquet",
+        data_files={
+            "train": f"{base}/train/0000.parquet",
+            "validation": f"{base}/validation/0000.parquet",
+            "test": f"{base}/test/0000.parquet",
+        },
+    )
     vocab = build_vocab(ds["train"]["sentence"])
 
     #Future optimization might work on collate_fn
@@ -44,8 +44,19 @@ def main():
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
 
-    train_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
-    print(f"Training loss: {train_loss:.4f}")
+    best_accuracy = -1.0
+    best_weights = None
+    for epoch in range(5):
+        train_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
+        accuracy = validate(model, validation_loader, device)
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_weights = deepcopy(model.state_dict())
+        print(f"Epoch {epoch + 1}: loss={train_loss:.4f}, validation accuracy={accuracy:.2%}")
+
+    model.load_state_dict(best_weights)
+    test_accuracy = validate(model, test_loader, device)
+    print(f"Test accuracy: {test_accuracy:.2%}")
 
 def train_one_epoch(model, loader, loss_fn, optimizer, device):
     model.train()
@@ -61,8 +72,21 @@ def train_one_epoch(model, loader, loss_fn, optimizer, device):
         optimizer.step()
 
         total_loss += loss.item()
-        return total_loss/len(loader)
-    
+    return total_loss/len(loader)
+
+def validate(model, loader, device):
+    model.eval()
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for token_ids, lengths, sentiments, _ in loader:
+            scores = model(token_ids.to(device), lengths)
+            predictions = scores.argmax(dim=1)
+            correct += (predictions == sentiments.to(device)).sum().item()
+            total += len(sentiments)
+
+    return correct / total
 
 
 if __name__ == "__main__":

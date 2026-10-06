@@ -3,7 +3,6 @@ from collections import Counter
 from collections.abc import Iterable
 from underthesea import word_tokenize
 from torch.nn.utils.rnn import pad_sequence
-from BiLSTM import BiLSTM
 
 #Filtering data
 def tokenize(sentence: str) -> list[str]:
@@ -23,7 +22,7 @@ def encode_sentence(sentence: str, vocab: dict[str,int]) -> list[int]:
     res = []
     for token in tokenize(sentence):
         res.append(vocab.get(token, vocab["<unk>"])) #Default value of vocab is <unk>
-    return res
+    return res or [vocab["<unk>"]]
 
 def collate_batch(rows, vocab):
     sequences = []
