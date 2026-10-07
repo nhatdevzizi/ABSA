@@ -24,4 +24,4 @@ build/
 dist/
 *.egg-info/
 
-*.md
+WORKFLOW.md
