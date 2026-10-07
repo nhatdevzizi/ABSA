@@ -40,14 +40,16 @@ def main():
         shuffle=False,
         collate_fn=lambda rows: collate_batch(rows, vocab),
     )
+
+    #Start from here
     model = BiLSTM(len(vocab)).to(device)
-    loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
+    loss_func = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr = 0.001) #Future optimization on *lr*
 
     best_accuracy = -1.0
     best_weights = None
     for epoch in range(5):
-        train_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
+        train_loss = train(model, train_loader, loss_func, optimizer, device)
         accuracy = validate(model, validation_loader, device)
         if accuracy > best_accuracy:
             best_accuracy = accuracy
@@ -58,7 +60,7 @@ def main():
     test_accuracy = validate(model, test_loader, device)
     print(f"Test accuracy: {test_accuracy:.2%}")
 
-def train_one_epoch(model, loader, loss_fn, optimizer, device):
+def train(model, loader, loss_fn, optimizer, device):
     model.train()
     total_loss = 0
     for token_ids, lengths, sentiments, _ in loader:

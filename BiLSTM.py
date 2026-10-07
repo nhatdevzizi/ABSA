@@ -14,5 +14,5 @@ class BiLSTM(nn.Module):
         embedded = self.embedding(token_ids)
         packed = pack_padded_sequence(embedded, lengths.cpu(), batch_first=True, enforce_sorted=False)
         _, (hidden, _) = self.lstm(packed)
-        sentence_state = torch.cat((hidden[0], hidden[1]), dim=1) #Hidden needs to be changed if add more layers
+        sentence_state = torch.cat((hidden[-2], hidden[-1]), dim=1) #Hidden needs to be changed if add more layers
         return self.sentiment_head(sentence_state)

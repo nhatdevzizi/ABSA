@@ -60,7 +60,7 @@ The same function is used during vocabulary construction and sentence encoding. 
 4. Sort the tokens. Add each token whose frequency meets `min_freq`.
 5. Return a dictionary from token text to integer ID.
 
-`main()` calls this function with `ds["train"]["sentence"]`. The reported vocabulary size was 4,011 in an earlier run. The size can change if the data or tokenization changes.
+`main()` calls this function with `ds["train"]["sentence"]`. The vocabulary size depends on the training data and tokenization.
 
 `<pad>` fills unused positions in a batch. `<unk>` represents a token absent from the training vocabulary.
 
@@ -85,7 +85,7 @@ The function does not truncate sentences. All tokens in a sentence remain in its
 5. Convert sentiment and topic labels to tensors.
 6. Return `(token_ids, lengths, sentiments, topics)`.
 
-For example, a previous batch had `token_ids.shape == (32, 24)`. It contained 32 sentences. The longest encoded sentence in that batch used 24 positions. Other batches can have a different width.
+With the configured batch size, `token_ids` has at most 32 rows. Its width is the longest encoded sentence in that batch. The final batch can have fewer rows.
 
 If a sentence has no tokens, `encode_sentence()` supplies one `<unk>` ID. This gives `pack_padded_sequence()` a valid positive length. It does not add information to an empty sentence.
 
@@ -124,24 +124,23 @@ flowchart LR
 
 ## 3. Data and model setup in `main.py`
 
-At module import, `device` is set to `"cuda"` when CUDA is available. Otherwise, it is `"cpu"`. `main()` loads the three parquet files named in `data_files`. Network access or a populated local dataset cache is needed for this load.
+At module import, `device` is set to `"cuda"` when CUDA is available. Otherwise, it is `"cpu"`. `main()` loads the three remote parquet files named in `data_files`. Network access or a populated local dataset cache is needed for this load.
 
 `main()` performs these steps:
 
-1. Load all rows from each supplied split. Print each split's row count.
-2. Reject an empty split or sentiment labels outside `{0, 1, 2}` before training starts.
-3. Build the vocabulary from the full training split.
-4. Create `train_loader` with batch size 32 and `shuffle=True`.
-5. Create `validation_loader` and `test_loader` with batch size 32 and `shuffle=False`.
-6. Pass `collate_batch(rows, vocab)` to each loader so all splits use the same vocabulary.
-7. Create `BiLSTM(len(vocab))` and move it to the selected device.
-8. Create `CrossEntropyLoss` for the three-class sentiment task.
-9. Create an Adam optimizer with learning rate `0.001`.
-10. Train for five epochs. Validate after each epoch.
-11. Keep an independent copy of the weights from the epoch with the highest validation accuracy.
-12. Restore those weights and measure test accuracy once.
+1. Load the training, validation, and test splits from the three parquet URLs.
+2. Build the vocabulary from the full training split.
+3. Create `train_loader` with batch size 32 and `shuffle=True`.
+4. Create `validation_loader` and `test_loader` with batch size 32 and `shuffle=False`.
+5. Pass `collate_batch(rows, vocab)` to each loader so all splits use the same vocabulary.
+6. Create `BiLSTM(len(vocab))` and move it to the selected device.
+7. Create `CrossEntropyLoss` for the three-class sentiment task.
+8. Create an Adam optimizer with learning rate `0.001`.
+9. Train for five epochs. Validate after each epoch.
+10. Keep an independent copy of the weights from the epoch with the highest validation accuracy.
+11. Restore those weights and measure test accuracy once.
 
-The training loader uses every row in the training split during each epoch. It does not combine validation or test rows with training rows. The test split does not choose the best epoch. Validation accuracy makes that choice. A run can produce different scores because the model starts with random weights and the training loader shuffles rows.
+The training loader uses every row in the training split during each epoch. It does not combine validation or test rows with training rows. The test split does not choose the best epoch. Validation accuracy makes that choice. A run can produce different scores because the model starts with random weights and the training loader shuffles rows. The current code does not check for empty splits or invalid sentiment labels before training.
 
 ## 4. One training epoch: `train_one_epoch()`
 
@@ -199,29 +198,11 @@ The loop begins with `best_accuracy = -1.0`. Every valid accuracy is at least ze
 
 After five epochs, `model.load_state_dict(best_weights)` restores the best validation epoch. The same `validate()` function then measures test accuracy. The program prints that result. It does not yet write the model weights or vocabulary to disk.
 
-The earlier five-epoch run, before best-weight selection was added, produced these values:
-
-| Epoch | Training loss | Validation accuracy |
-| ---: | ---: | ---: |
-| 1 | 0.3882 | 89.64% |
-| 2 | 0.2374 | 90.40% |
-| 3 | 0.1673 | 90.78% |
-| 4 | 0.1092 | 90.27% |
-| 5 | 0.0554 | 90.59% |
-
-```mermaid
-xychart-beta
-    title "Earlier validation accuracy by epoch"
-    x-axis [1, 2, 3, 4, 5]
-    y-axis "Accuracy (%)" 89 --> 91
-    line [89.64, 90.40, 90.78, 90.27, 90.59]
-```
-
-Epoch 3 had the highest validation accuracy in that run. The code now selects the best epoch automatically. A new run can select a different epoch. Training loss fell through epoch 5, while validation accuracy varied after epoch 3. This pattern can indicate overfitting, but these five results alone do not prove it.
+The program prints training loss and validation accuracy after each epoch. It selects the best epoch automatically. A new run can select a different epoch.
 
 ## Run status and next actions
 
-The current code has **not** been run for training as part of this report update. Running `python main.py` starts data loading and then model training. The program first prints the three split sizes, then five epoch lines and one final test accuracy line. This environment blocks the dataset download, so the actual split sizes and labels were not verified here. The checks in `main()` will verify them before training begins in an environment with access to the files.
+Running `python main.py` starts data loading and then model training. If loading and training succeed, the program prints five epoch lines and one final test accuracy line. This document does not report results from a current training run. The program does not print split sizes or check label values before training.
 
 The present result covers sentiment accuracy only. If the goal later includes topic prediction, add a topic output layer, include topic loss during training, and report topic metrics separately. If the goal requires repeatable comparisons, set random seeds and record the dataset and package versions. If the goal requires inference after the process exits, save both the selected model weights and the vocabulary.
 
