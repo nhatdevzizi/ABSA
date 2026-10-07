@@ -57,7 +57,7 @@ def main():
         print(f"Epoch {epoch + 1}: loss={train_loss:.4f}, validation accuracy={accuracy:.2%}")
 
     model.load_state_dict(best_weights)
-    test_accuracy = validate(model, test_loader, device)
+    test_accuracy = test(model, test_loader, device)
     print(f"Test accuracy: {test_accuracy:.2%}")
 
 def train(model, loader, loss_fn, optimizer, device):
@@ -70,6 +70,7 @@ def train(model, loader, loss_fn, optimizer, device):
         optimizer.zero_grad()
         scores = model(token_ids, lengths)
         loss = loss_fn(scores, sentiments)
+        #Future work with other loss functions might work here
         loss.backward()
         optimizer.step()
 
@@ -90,6 +91,8 @@ def validate(model, loader, device):
 
     return correct / total
 
+def test(model, loader, device):
+    return validate(model, loader, device)
 
 if __name__ == "__main__":
     main()
