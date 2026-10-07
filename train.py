@@ -21,8 +21,8 @@ def build_vocab(sentences: Iterable[str], min_freq: int = 1) -> dict[str,int]:
 def encode_sentence(sentence: str, vocab: dict[str,int]) -> list[int]:
     res = []
     for token in tokenize(sentence):
-        res.append(vocab.get(token, vocab["<unk>"]))
-    return res
+        res.append(vocab.get(token, vocab["<unk>"])) #Default value of vocab is <unk>
+    return res or [vocab["<unk>"]]
 
 def collate_batch(rows, vocab):
     sequences = []
@@ -34,3 +34,4 @@ def collate_batch(rows, vocab):
     sentiments = torch.tensor([row["sentiment"] for row in rows])
     topics = torch.tensor([row["topic"] for row in rows])
     return token_ids, lengths, sentiments, topics
+
