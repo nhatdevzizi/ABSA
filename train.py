@@ -18,6 +18,7 @@ def build_vocab(sentences: Iterable[str], min_freq: int = 1) -> dict[str,int]:
             vocab[token] = len(vocab)
     return vocab
 
+#Standardize data
 def encode_sentence(sentence: str, vocab: dict[str,int]) -> list[int]:
     res = []
     for token in tokenize(sentence):

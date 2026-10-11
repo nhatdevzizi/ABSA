@@ -1,54 +1,18 @@
 from copy import deepcopy
-
-from datasets import load_dataset
-from torch.utils.data import DataLoader
 import torch
-
-from train import build_vocab, collate_batch
+from data import *
 from BiLSTM import BiLSTM
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-base = "https://huggingface.co/datasets/uitnlp/vietnamese_students_feedback/resolve/refs%2Fconvert%2Fparquet/default"
 
 def main():
-    ds = load_dataset(
-        "parquet",
-        data_files={
-            "train": f"{base}/train/0000.parquet",
-            "validation": f"{base}/validation/0000.parquet",
-            "test": f"{base}/test/0000.parquet",
-        },
-    )
-    vocab = build_vocab(ds["train"]["sentence"])
-
-    #Future optimization might work on collate_fn
-    train_loader = DataLoader(
-        ds["train"],
-        batch_size=32,
-        shuffle = True,
-        collate_fn=lambda rows: collate_batch(rows, vocab)
-    )
-    validation_loader = DataLoader(
-        ds["validation"],
-        batch_size=32,
-        shuffle=False,
-        collate_fn=lambda rows: collate_batch(rows, vocab),
-    )
-    test_loader = DataLoader(
-        ds["test"],
-        batch_size=32,
-        shuffle=False,
-        collate_fn=lambda rows: collate_batch(rows, vocab),
-    )
-
-    #Start from here
     model = BiLSTM(len(vocab)).to(device)
     loss_func = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr = 0.001) #Future optimization on *lr*
 
     best_accuracy = -1.0
     best_weights = None
-    for epoch in range(5):
+    for epoch in range(10):
         train_loss = train(model, train_loader, loss_func, optimizer, device)
         accuracy = validate(model, validation_loader, device)
         if accuracy > best_accuracy:
@@ -95,4 +59,4 @@ def test(model, loader, device):
     return validate(model, loader, device)
 
 if __name__ == "__main__":
-    main()
+        main()
