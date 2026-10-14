@@ -33,6 +33,7 @@ def collate_batch(rows, vocab):
     lengths = torch.tensor([len(sequence) for sequence in sequences])
     token_ids = pad_sequence(sequences, batch_first= True, padding_value= vocab["<pad>"])
     sentiments = torch.tensor([row["sentiment"] for row in rows])
-    topics = torch.tensor([row["topic"] for row in rows])
+    # UIT-VSMEC has no topic label; training ignores this batch field.
+    topics = torch.tensor([row.get("topic", -1) for row in rows])
     return token_ids, lengths, sentiments, topics
 

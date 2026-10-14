@@ -4,11 +4,11 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 
 class BiLSTM(nn.Module):
-    def __init__(self, vocab_size: int, embedding_dim: int = 128, hidden_dim: int = 128):
+    def __init__(self, vocab_size: int, embedding_dim: int = 512, hidden_dim: int = 512, num_classes: int = 3):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True, bidirectional=True) #Check what happens if change bias
-        self.sentiment_head = nn.Linear(hidden_dim * 2, 3)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers= 3, batch_first=True, bidirectional=True) #Check what happens if change bias
+        self.sentiment_head = nn.Linear(hidden_dim * 2, num_classes)
 
     def forward(self, token_ids: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
         embedded = self.embedding(token_ids)
