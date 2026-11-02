@@ -1,0 +1,83 @@
+{
+  "label_schema": "negative=0,neutral=1,positive=2",
+  "output_dir": "outputs",
+  "preparation_manifest": "data/baseline/preparation.json",
+  "splits": {
+    "5": {
+      "42": {
+        "train": "data/baseline/neu_esc_train__f5__s42.csv",
+        "dev": "data/baseline/neu_esc_dev__f5__s42.csv"
+      },
+      "43": {
+        "train": "data/baseline/neu_esc_train__f5__s43.csv",
+        "dev": "data/baseline/neu_esc_dev__f5__s43.csv"
+      },
+      "44": {
+        "train": "data/baseline/neu_esc_train__f5__s44.csv",
+        "dev": "data/baseline/neu_esc_dev__f5__s44.csv"
+      },
+      "45": {
+        "train": "data/baseline/neu_esc_train__f5__s45.csv",
+        "dev": "data/baseline/neu_esc_dev__f5__s45.csv"
+      },
+      "46": {
+        "train": "data/baseline/neu_esc_train__f5__s46.csv",
+        "dev": "data/baseline/neu_esc_dev__f5__s46.csv"
+      }
+    },
+    "100": {
+      "42": {
+        "train": "data/baseline/neu_esc_train__f100__s42.csv",
+        "dev": "data/baseline/neu_esc_dev__f100__s42.csv"
+      },
+      "43": {
+        "train": "data/baseline/neu_esc_train__f100__s43.csv",
+        "dev": "data/baseline/neu_esc_dev__f100__s43.csv"
+      },
+      "44": {
+        "train": "data/baseline/neu_esc_train__f100__s44.csv",
+        "dev": "data/baseline/neu_esc_dev__f100__s44.csv"
+      },
+      "45": {
+        "train": "data/baseline/neu_esc_train__f100__s45.csv",
+        "dev": "data/baseline/neu_esc_dev__f100__s45.csv"
+      },
+      "46": {
+        "train": "data/baseline/neu_esc_train__f100__s46.csv",
+        "dev": "data/baseline/neu_esc_dev__f100__s46.csv"
+      }
+    },
+    "1": {
+      "42": {
+        "train": "data/baseline/neu_esc_train__f1__s42.csv",
+        "dev": "data/baseline/neu_esc_dev__f1__s42.csv"
+      },
+      "43": {
+        "train": "data/baseline/neu_esc_train__f1__s43.csv",
+        "dev": "data/baseline/neu_esc_dev__f1__s43.csv"
+      },
+      "44": {
+        "train": "data/baseline/neu_esc_train__f1__s44.csv",
+        "dev": "data/baseline/neu_esc_dev__f1__s44.csv"
+      }
+    },
+    "10": {
+      "42": {
+        "train": "data/baseline/neu_esc_train__f10__s42.csv",
+        "dev": "data/baseline/neu_esc_dev__f10__s42.csv"
+      },
+      "43": {
+        "train": "data/baseline/neu_esc_train__f10__s43.csv",
+        "dev": "data/baseline/neu_esc_dev__f10__s43.csv"
+      },
+      "44": {
+        "train": "data/baseline/neu_esc_train__f10__s44.csv",
+        "dev": "data/baseline/neu_esc_dev__f10__s44.csv"
+      }
+    }
+  },
+  "tests": {
+    "neu_esc_test": "data/baseline/neu_esc_test.csv",
+    "uit_vsfc_test": "data/baseline/uit_vsfc_test_clean.csv"
+  }
+}

@@ -37,3 +37,21 @@ def collate_batch(rows, vocab):
     topics = torch.tensor([row.get("topic", -1) for row in rows])
     return token_ids, lengths, sentiments, topics
 
+
+def collate_visobert(rows, tokenizer):
+    """Collate function for VISoBERT with raw text input."""
+    sentences = [row["sentence"] for row in rows]
+    encoded = tokenizer(
+        sentences,
+        padding=True,
+        truncation=True,
+        max_length=128,
+        return_tensors='pt'
+    )
+    input_ids = encoded['input_ids']
+    attention_mask = encoded['attention_mask']
+    sentiments = torch.tensor([row["sentiment"] for row in rows])
+    # UIT-VSMEC has no topic label; training ignores this batch field.
+    topics = torch.tensor([row.get("topic", -1) for row in rows])
+    return input_ids, attention_mask, sentiments, topics
+
