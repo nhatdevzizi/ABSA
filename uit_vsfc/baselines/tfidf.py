@@ -26,12 +26,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 from sklearn.exceptions import ConvergenceWarning
 
-from measurer import evaluate_predictions, evaluate_file, save_csv, summarize, update_results
+from uit_vsfc.evaluation.metrics import evaluate_predictions, evaluate_file, save_csv, summarize, update_results
 
 MODELS = ("TF_LR", "TF_SVM")
 SEEDS = {5: range(42, 47), 100: range(42, 47), 1: range(42, 45), 10: range(42, 45)}
 PREPROCESS_VERSION = "nfc-lower-repeat3to2-v1"
-SOURCE_FILES = ("tf_baselines.py", "measurer.py", "main.py", "prepare_baseline_data.py",
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SOURCE_FILES = ("uit_vsfc/baselines/tfidf.py", "uit_vsfc/evaluation/metrics.py", "main.py", "uit_vsfc/data/prepare.py",
                 "pyproject.toml", "uv.lock")
 
 
@@ -138,7 +139,7 @@ def provenance(paths):
     result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False)
     return {
         "data_sha256": {str(path): digest(path) for path in paths},
-        "source_sha256": {name: digest(Path(__file__).with_name(name))
+        "source_sha256": {name: digest(PROJECT_ROOT / name)
                           for name in SOURCE_FILES},
         "working_tree_dirty": bool(subprocess.run(
             ["git", "status", "--porcelain"], capture_output=True, text=True, check=False).stdout.strip()),
@@ -156,7 +157,7 @@ def verify_files(hashes):
 
 
 def verify_source(metadata):
-    verify_files({Path(__file__).with_name(name): value for name, value in metadata["source_sha256"].items()})
+    verify_files({PROJECT_ROOT / name: value for name, value in metadata["source_sha256"].items()})
 
 
 def frozen_inputs(config):
@@ -269,8 +270,8 @@ def train_run(config, model, fraction, seed):
     # JSON is a YAML 1.2 subset; no separate YAML dependency is required.
     save_json(folder / "config.yaml", metadata)
     for name in SOURCE_FILES:
-        source = Path(__file__).with_name(name)
-        (folder / "source").mkdir(exist_ok=True)
+        source = PROJECT_ROOT / name
+        (folder / "source" / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, folder / "source" / name)
     save_json(folder / "log.json", log)
     save_json(folder / "status.json", {"status": "trained", "complete": False})
@@ -346,16 +347,17 @@ def finalize_evaluation(config, model, fraction, seed, folder, metadata):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["tune", "train", "evaluate"])
-    parser.add_argument("--config", default="baseline_config.json")
+    parser.add_argument("--config", default=str(PROJECT_ROOT / "configs/baseline.json"))
     parser.add_argument("--model", choices=[*MODELS, "all"], default="all")
     parser.add_argument("--fraction", type=int, choices=SEEDS)
     parser.add_argument("--seed", type=int)
     args = parser.parse_args()
     config_path = Path(args.config).resolve()
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    config["config_root"] = str(config_path.parent)
+    config_root = (config_path.parent / config.get("project_root", ".")).resolve()
+    config["config_root"] = str(config_root)
     if "preparation_manifest" in config:
-        config["preparation_manifest"] = str((config_path.parent / config["preparation_manifest"]).resolve())
+        config["preparation_manifest"] = str((config_root / config["preparation_manifest"]).resolve())
     if config.get("label_schema") != "negative=0,neutral=1,positive=2":
         parser.error("Set label_schema to negative=0,neutral=1,positive=2 after preprocessing")
     if set(config["tests"]) != {"neu_esc_test", "uit_vsfc_test"}:
@@ -363,9 +365,9 @@ def main():
     for seeds in config["splits"].values():
         for split in seeds.values():
             for key in ("train", "dev"):
-                split[key] = str((config_path.parent / split[key]).resolve())
-    config["tests"] = {key: str((config_path.parent / value).resolve()) for key, value in config["tests"].items()}
-    config["output_dir"] = str((config_path.parent / config["output_dir"]).resolve())
+                split[key] = str((config_root / split[key]).resolve())
+    config["tests"] = {key: str((config_root / value).resolve()) for key, value in config["tests"].items()}
+    config["output_dir"] = str((config_root / config["output_dir"]).resolve())
     if args.seed is not None and args.fraction is None:
         parser.error("--seed requires --fraction")
     if args.fraction is not None and args.seed is not None and args.seed not in SEEDS[args.fraction]:

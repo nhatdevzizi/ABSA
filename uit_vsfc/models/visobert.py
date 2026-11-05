@@ -29,6 +29,8 @@ class ViSoBERTBiLSTM(nn.Module):
             raise ValueError("All sequences must have at least one valid token")
         if (attention_mask[:, 1:] > attention_mask[:, :-1]).any():
             raise ValueError("attention_mask must be right-padded")
+
+        # main logic
         with torch.no_grad():
             embedded = self.encoder(input_ids=input_ids, attention_mask=attention_mask.to(input_ids.device)).last_hidden_state
         packed = pack_padded_sequence(embedded, lengths, batch_first=True, enforce_sorted=False)

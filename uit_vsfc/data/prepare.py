@@ -6,11 +6,10 @@ import hashlib
 
 import pandas as pd
 
-from tf_baselines import SEEDS, digest, load_split, normalize, save_json
+from uit_vsfc.baselines.tfidf import SEEDS, digest, load_split, normalize, save_json
 
 
-ROOT = Path(__file__).resolve().parent
-
+ROOT = Path(__file__).resolve().parents[2]
 
 def prepare():
     source_hashes = {}
@@ -34,7 +33,7 @@ def prepare():
     frames = {}
     config = {"label_schema": "negative=0,neutral=1,positive=2", "output_dir": "outputs",
               "preparation_manifest": "data/baseline/preparation.json",
-              "splits": {}, "tests": {}}
+              "project_root": "..", "splits": {}, "tests": {}}
     for fraction, seeds in SEEDS.items():
         config["splits"][str(fraction)] = {}
         for seed in seeds:
@@ -84,7 +83,7 @@ def prepare():
         "export_sha256": {name: digest(ROOT / name) for name in frames},
         "rows": {name: len(frame) for name, frame in frames.items()},
     })
-    save_json(ROOT / "baseline_config.json", config)
+    save_json(ROOT / "configs/baseline.json", config)
     print(f"Prepared {len(frames)} CSV files; baseline_config.json now uses data/baseline/")
 
 

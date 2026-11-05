@@ -79,5 +79,6 @@
   "tests": {
     "neu_esc_test": "data/baseline/neu_esc_test.csv",
     "uit_vsfc_test": "data/baseline/uit_vsfc_test_clean.csv"
-  }
+  },
+  "project_root": ".."
 }

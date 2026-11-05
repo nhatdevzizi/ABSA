@@ -1,4 +1,4 @@
-from train import build_vocab, collate_batch, collate_visobert
+from uit_vsfc.data.batching import build_vocab, collate_batch, collate_visobert
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 import functools
