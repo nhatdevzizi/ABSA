@@ -10,6 +10,12 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+outputs/
+/.outputs-state/
+scripts/
+/docs/*
+!/docs/guides/
+subagents/
 
 # PyCharm project settings
 .idea/

@@ -1,0 +1,15 @@
+{
+  "output_dir": "outputs",
+  "emotion_names": ["Enjoyment", "Sadness", "Fear", "Anger", "Disgust", "Surprise", "Other"],
+  "emotion_names_source": "Dataset owner confirmed numeric label order in chat",
+  "candidates": [0.1, 1.0, 10.0],
+  "vsmec": {
+    "train": "data/clean/vsmec_train.csv",
+    "dev": "data/clean/vsmec_dev.csv",
+    "test": "data/clean/vsmec_test.csv"
+  },
+  "tests": {
+    "neu_esc_test": "data/baseline/neu_esc_test.csv",
+    "uit_vsfc_test": "data/baseline/uit_vsfc_test_clean.csv"
+  }
+}

@@ -6,7 +6,7 @@ import hashlib
 
 import pandas as pd
 
-from uit_vsfc.baselines.tfidf import SEEDS, digest, load_split, normalize, save_json
+from uit_vsfc.baselines.tfidf_direct_sentiment import SEEDS, digest, load_split, normalize, save_json
 
 
 ROOT = Path(__file__).resolve().parents[2]

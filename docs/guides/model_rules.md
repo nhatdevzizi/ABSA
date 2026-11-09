@@ -117,7 +117,7 @@ Dạng `[Backbone hoặc đặc trưng]_[Phương pháp]_[Kỹ thuật bổ sung
 
 Mỗi lượt chạy lưu một file cho mỗi tập đánh giá.
 
-- **Thư mục**: `outputs/preds/{model}/`
+- **Thư mục làm việc mặc định**: `.outputs-state/preds/{model}/`
 - **Tên file**: `{model}__{dataset}__f{fraction}__s{seed}.csv`
   - Ví dụ: `ViSoBERT_HR_LA__neu_esc_test__f5__s42.csv`
   - `dataset` ∈ `neu_esc_dev`, `neu_esc_test`, `uit_vsfc_test`

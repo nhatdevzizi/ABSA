@@ -1,4 +1,4 @@
-"""Classical baselines on frozen, preprocessed sentiment splits."""
+"""Train TF-IDF baselines directly on sentiment labels."""
 
 import argparse
 import hashlib
@@ -32,7 +32,8 @@ MODELS = ("TF_LR", "TF_SVM")
 SEEDS = {5: range(42, 47), 100: range(42, 47), 1: range(42, 45), 10: range(42, 45)}
 PREPROCESS_VERSION = "nfc-lower-repeat3to2-v1"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SOURCE_FILES = ("uit_vsfc/baselines/tfidf.py", "uit_vsfc/evaluation/metrics.py", "main.py", "uit_vsfc/data/prepare.py",
+SOURCE_FILES = ("uit_vsfc/baselines/tfidf_direct_sentiment.py", "uit_vsfc/evaluation/metrics.py",
+                "main.py", "uit_vsfc/data/prepare.py",
                 "pyproject.toml", "uv.lock")
 
 
@@ -178,8 +179,13 @@ def check_frozen(config, paths):
         verify_files({path: frozen[str(Path(path).resolve())] for path in paths})
 
 
+def run_state_dir(config):
+    output = Path(config["output_dir"]).resolve()
+    return output.with_name(f".{output.name}-state")
+
+
 def tune(config, model):
-    target = Path(config["output_dir"]) / "tuning" / f"{model}.json"
+    target = run_state_dir(config) / "tuning" / f"{model}.json"
     if target.exists():
         saved = json.loads(target.read_text(encoding="utf-8"))
         verify_files(saved["data_sha256"])
@@ -207,20 +213,19 @@ def tune(config, model):
 
 
 def run_dir(config, model, fraction, seed):
-    return Path(config["output_dir"]) / "runs" / model / f"f{fraction}__s{seed}"
+    return run_state_dir(config) / "runs" / model / f"f{fraction}__s{seed}"
 
 
 def train_run(config, model, fraction, seed):
     folder = run_dir(config, model, fraction, seed)
+    tuning_path = run_state_dir(config) / "tuning" / f"{model}.json"
     if (folder / "config.yaml").exists() and (folder / "log.json").exists():
         metadata = verify_run(folder, config, model, fraction, seed)
-        tuning_path = Path(config["output_dir"]) / "tuning" / f"{model}.json"
         verify_files({tuning_path: metadata["tuning_sha256"]})
         if not (folder / "status.json").exists():
             save_json(folder / "status.json", {"status": "trained", "complete": False})
         print(f"Skipping trained {model} f{fraction} s{seed}")
         return "skipped"
-    tuning_path = Path(config["output_dir"]) / "tuning" / f"{model}.json"
     tuning = json.loads(tuning_path.read_text(encoding="utf-8"))
     verify_files(tuning["data_sha256"])
     verify_source(tuning)
@@ -306,8 +311,7 @@ def evaluate_run(config, model, fraction, seed):
     for neu in (full_train, full_dev, frames["neu_esc_test"]):
         check_disjoint(neu, ood, check_ids=False)
     estimator = joblib.load(folder / "checkpoint.joblib")
-    output = Path(config["output_dir"])
-    pred_dir = output / "preds" / model
+    pred_dir = run_state_dir(config) / "preds" / model
     pred_dir.mkdir(parents=True, exist_ok=True)
     prediction_hashes = {}
     for dataset, frame in frames.items():
@@ -330,15 +334,16 @@ def evaluate_run(config, model, fraction, seed):
 
 
 def finalize_evaluation(config, model, fraction, seed, folder, metadata):
-    output = Path(config["output_dir"])
+    results = Path(config["output_dir"]) / "results.csv"
+    pred_dir = run_state_dir(config) / "preds" / model
     matrices = {}
     for dataset, path in {"neu_esc_dev": metadata["split"]["dev"], **metadata["tests"]}.items():
-        prediction = output / "preds" / model / f"{model}__{dataset}__f{fraction}__s{seed}.csv"
+        prediction = pred_dir / f"{model}__{dataset}__f{fraction}__s{seed}.csv"
         metrics = evaluate_file(prediction, expected=load_split(path))
         matrices[dataset] = metrics["confusion_matrix"]
-        update_results(output / "results.csv", model, dataset, fraction, seed, "na", metrics)
+        update_results(results, model, dataset, fraction, seed, "na", metrics)
     save_json(folder / "confusion_matrices.json", matrices)
-    summarize(output / "results.csv")
+    summarize(results)
     update_tracker(config, dict(model=model, fraction=fraction, seed=seed,
                                 command="evaluate", status="complete", error=""))
     save_json(folder / "status.json", {"status": "complete", "complete": True})
@@ -403,14 +408,14 @@ def record_attempt(config, model, fraction, seed, command, action):
     finally:
         row["finished_utc"] = datetime.now(timezone.utc).isoformat()
         update_tracker(config, row)
-        path = Path(config["output_dir"]) / "attempts.jsonl"
+        path = run_state_dir(config) / "attempts.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(row) + "\n")
 
 
 def update_tracker(config, row):
-    path = Path(config["output_dir"]) / "run_tracker.csv"
+    path = run_state_dir(config) / "run_tracker.csv"
     tracker = pd.read_csv(path, keep_default_na=False) if path.exists() else pd.DataFrame()
     if not tracker.empty:
         same = ((tracker.model == row["model"]) & (tracker.fraction == row["fraction"])
