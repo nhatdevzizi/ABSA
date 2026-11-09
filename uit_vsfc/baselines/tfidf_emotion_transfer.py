@@ -1,7 +1,6 @@
 """Train seven VSMEC emotions, then map predicted emotions to sentiment."""
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
@@ -13,7 +12,7 @@ from sklearn.metrics import f1_score, log_loss
 
 from uit_vsfc.baselines.tfidf_direct_sentiment import (
     PROJECT_ROOT, check_disjoint, digest, fit_model, load_split, make_model,
-    provenance, record_attempt, run_dir, run_state_dir, save_json, settings, verify_files,
+    provenance, record_attempt, run_dir, run_state_dir, save_json, settings, verify_files, verify_manifest_file, verify_source,
 )
 from uit_vsfc.evaluation.metrics import evaluate_file, save_csv, summarize, update_results
 
@@ -50,7 +49,6 @@ def hard_predictions(estimator, frame, names):
 
 
 def run(config, model):
-    results = Path(config["output_dir"]) / "results.csv"
     folder = run_dir(config, model, 100, "NA")
     pred_dir = run_state_dir(config) / "preds" / model
     names = config["emotion_names"]
@@ -63,10 +61,7 @@ def run(config, model):
     manifest_path = PROJECT_ROOT / "data/clean/MANIFEST.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     for path in paths.values():
-        raw = path.read_bytes()
-        if manifest[path.name] not in (hashlib.sha256(raw).hexdigest(),
-                                      hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()):
-            raise ValueError(f"Frozen manifest mismatch: {path}")
+        verify_manifest_file(path, manifest[path.name])
     preparation = PROJECT_ROOT / "data/baseline/preparation.json"
     exports = json.loads(preparation.read_text(encoding="utf-8"))["export_sha256"]
     verify_files({path: exports[str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")]
@@ -77,40 +72,50 @@ def run(config, model):
     if metadata_path.exists():
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         verify_files(metadata["data_sha256"])
-        verify_files({PROJECT_ROOT / key: value for key, value in metadata["source_sha256"].items()})
+        verify_source(metadata)
         verify_files({folder / "checkpoint.joblib": metadata["checkpoint_sha256"]})
         if metadata["configuration"] != config or metadata["model"] != model:
             raise ValueError("Configuration changed; use a new output directory")
     else:
         if folder.exists() and any(folder.iterdir()):
             raise ValueError(f"Incomplete run exists; preserve it before rerunning: {folder}")
-        train, dev = (load_emotions(paths[key], key) for key in ("train", "dev"))
-        check_disjoint(train, dev)
-        started = time.perf_counter()
-        scores, best, best_score = [], None, -1
-        for c_value in config["candidates"]:
-            estimator = fit_model(make_model(model.removeprefix("Hard_"), c_value, 0), train)
-            score = f1_score(dev.label, estimator.predict(dev.text), labels=range(7),
-                             average="macro", zero_division=0)
-            scores.append({"C": c_value, "macro_f1_vsmec_dev_7": score})
-            print(f"{model}: C={c_value}, VSMEC dev macro-F1={score:.6f}", flush=True)
-            if score > best_score:
-                best, best_score, best_c = estimator, score, c_value
-        folder.mkdir(parents=True, exist_ok=True)
-        joblib.dump(best, folder / "checkpoint.joblib")
-        save_json(folder / "log.json", {
-            "candidates": scores, "selected_C": best_c, "dev_macro_f1_7": best_score,
-            "train_loss": log_loss(train.label, best.predict_proba(train.text), labels=range(7)),
-            "val_loss": log_loss(dev.label, best.predict_proba(dev.text), labels=range(7)),
-            "seconds": time.perf_counter() - started,
-        })
-        save_json(metadata_path, {
-            **receipt, "configuration": config, "model": model, "fraction": 100, "seed": "NA",
-            "internal_random_state": 0, "selected_C": best_c, "estimator": settings(best),
-            "checkpoint_sha256": digest(folder / "checkpoint.joblib"),
-            "selection": "VSMEC dev seven-class macro-F1; first C wins ties; train only",
-            "decision": "map predicted emotion; probabilities sum by sentiment group",
-        })
+        train_checkpoint(config, model, paths, folder, receipt)
+    evaluate_checkpoint(config, model, paths, tests, folder, pred_dir, names)
+
+
+def train_checkpoint(config, model, paths, folder, receipt):
+    metadata_path = folder / "config.yaml"
+    train, dev = (load_emotions(paths[key], key) for key in ("train", "dev"))
+    check_disjoint(train, dev)
+    started = time.perf_counter()
+    scores, best, best_score = [], None, -1
+    for c_value in config["candidates"]:
+        estimator = fit_model(make_model(model.removeprefix("Hard_"), c_value, 0), train)
+        score = f1_score(dev.label, estimator.predict(dev.text), labels=range(7),
+                         average="macro", zero_division=0)
+        scores.append({"C": c_value, "macro_f1_vsmec_dev_7": score})
+        print(f"{model}: C={c_value}, VSMEC dev macro-F1={score:.6f}", flush=True)
+        if score > best_score:
+            best, best_score, best_c = estimator, score, c_value
+    folder.mkdir(parents=True, exist_ok=True)
+    joblib.dump(best, folder / "checkpoint.joblib")
+    save_json(folder / "log.json", {
+        "candidates": scores, "selected_C": best_c, "dev_macro_f1_7": best_score,
+        "train_loss": log_loss(train.label, best.predict_proba(train.text), labels=range(7)),
+        "val_loss": log_loss(dev.label, best.predict_proba(dev.text), labels=range(7)),
+        "seconds": time.perf_counter() - started,
+    })
+    save_json(metadata_path, {
+        **receipt, "configuration": config, "model": model, "fraction": 100, "seed": "NA",
+        "internal_random_state": 0, "selected_C": best_c, "estimator": settings(best),
+        "checkpoint_sha256": digest(folder / "checkpoint.joblib"),
+        "selection": "VSMEC dev seven-class macro-F1; first C wins ties; train only",
+        "decision": "map predicted emotion; probabilities sum by sentiment group",
+    })
+
+
+def evaluate_checkpoint(config, model, paths, tests, folder, pred_dir, names):
+    results = Path(config["output_dir"]) / "results.csv"
     evaluation_path = folder / "evaluation.json"
     if evaluation_path.exists():
         verify_files(json.loads(evaluation_path.read_text(encoding="utf-8"))["prediction_sha256"])

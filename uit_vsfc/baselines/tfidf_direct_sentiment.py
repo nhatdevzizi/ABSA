@@ -81,6 +81,15 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def verify_manifest_file(path, expected):
+    """Accept frozen files with either LF or CRLF line endings."""
+    raw = Path(path).read_bytes()
+    hashes = (hashlib.sha256(raw).hexdigest(),
+              hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest())
+    if expected not in hashes:
+        raise ValueError(f"Source manifest mismatch: {path}")
+
+
 def save_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -259,6 +268,7 @@ def train_run(config, model, fraction, seed):
     }
     joblib.dump(estimator, folder / "checkpoint.joblib.tmp")
     (folder / "checkpoint.joblib.tmp").replace(folder / "checkpoint.joblib")
+    frozen = frozen_inputs(config)
     metadata = {
         "model": model, "fraction": fraction, "seed": seed, "C": tuning["C"],
         "split": split, "tests": config["tests"], "full_split": full,
@@ -266,8 +276,8 @@ def train_run(config, model, fraction, seed):
         "estimator": settings(estimator),
         "seed_limitation": "subset selection and training variability are combined",
         "classical_training": "single fit; transformer epoch, padding and GPU schedules do not apply",
-        "expected_test_sha256": {path: frozen_inputs(config)[str(Path(path).resolve())]
-                                 for path in config["tests"].values()} if frozen_inputs(config) else {},
+        "expected_test_sha256": {path: frozen[str(Path(path).resolve())]
+                                 for path in config["tests"].values()} if frozen else {},
         "labels": {"0": "negative", "1": "neutral", "2": "positive"},
         "tuning_sha256": digest(tuning_path), "checkpoint_sha256": digest(folder / "checkpoint.joblib"),
         **provenance([split["train"], split["dev"], full["train"], full["dev"]]),

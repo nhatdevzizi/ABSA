@@ -2,11 +2,10 @@
 
 import json
 from pathlib import Path
-import hashlib
 
 import pandas as pd
 
-from uit_vsfc.baselines.tfidf_direct_sentiment import SEEDS, digest, load_split, normalize, save_json
+from uit_vsfc.baselines.tfidf_direct_sentiment import SEEDS, digest, load_split, normalize, save_json, verify_manifest_file
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,10 +17,7 @@ def prepare():
         source_hashes[str((folder / "MANIFEST.json").relative_to(ROOT))] = digest(folder / "MANIFEST.json")
         for name, expected in manifest.items():
             path = folder / name
-            raw = path.read_bytes()
-            if expected not in (hashlib.sha256(raw).hexdigest(),
-                                hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()):
-                raise ValueError(f"Source manifest mismatch: {path}")
+            verify_manifest_file(path, expected)
             source_hashes[str(path.relative_to(ROOT))] = digest(path)
 
     full_path = ROOT / "data/splits/neuesc_100.csv"
